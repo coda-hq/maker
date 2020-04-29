@@ -22,22 +22,38 @@
 /*
  * Coda.io API (v1beta1)
  *
- * You need to fill in accessToken and update your doc and table ids.
+ * For an example of the doc that consumes this data see this published
+ * document in the Coda gallery:-
+ * 
+ *     https://coda.io/@matthew-tebbs/home-iot
+ * 
+ * To make use of this example code you will need to fill in the API access token,
+ * and update the doc, table and column ids to match your own.
  */
 
-const String accessToken = String("GUID");
-const char* fingerPrintSHA1 = "66 04 FC 41 1A 4F 23 4C 28 1D D8 83 92 35 42 EC 3B 8F 05 B8";
-const String docId = String("gUOyW0oZPH");
-const String tableId = String("grid-67ZS_s3Vvx");
-const String colIdTemperature = String("c-5C1BglTBBT");
-const String colIdHumidity = String("c-U7RcYKNYX_");
+#define ACCESS_TOKEN    "ACCESS_TOKEN"
+#define DOCID           "DOCID"
+#define TABLEID         "TABLEID"
+#define COLID_TEMP      "COLID_TEMP"
+#define COLID_HUMIDITY  "COLID_HUMIDITY"
+
+const String accessToken = String(ACCESS_TOKEN);
+const String docId = String(DOCID);
+const String tableId = String(TABLEID);
+const String colIdTemperature = String(COLID_TEMP);
+const String colIdHumidity = String(COLID_HUMIDITY);
+
+/*
+ * SHA-1 fingerprint of the Coda.io SSL certificate.
+ */
+const char* fingerPrintSHA1 = "76 F9 7D 68 87 4A BE D5 F2 67 77 A1 9D 5A 53 44 C2 B7 16 E3";
 
 /*
  * Requires the following boards:
  * 
  * - ESP8266 Core for Arduino: https://github.com/esp8266/Arduino
  *
- * You need to fill in SSID and PASSWORD.
+ * You will need to fill in your router's SSID and PASSWORD.
  */
 
 #include <ESP8266WiFi.h>
@@ -74,8 +90,6 @@ Adafruit_SSD1306 g_ssd1306Display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET
  * - Adafruit DHT Sensor Library: https://github.com/adafruit/DHT-sensor-library
  */
 
-#include <Adafruit_Sensor.h>
-#include <DHT.h>
 #include <DHT_U.h>
 
 /*
