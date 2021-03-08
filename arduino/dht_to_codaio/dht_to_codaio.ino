@@ -14,13 +14,13 @@
 /*
  * Requires the following libraries:
  * 
- * - ArduinoJson Library: https://arduinojson.org/
+ * - ArduinoJson Library v6: https://arduinojson.org/
  */
  
 #include <ArduinoJson.h>
 
 /*
- * Coda.io API (v1beta1)
+ * Coda.io API (v1)
  *
  * For an example of the doc that consumes this data see this published
  * document in the Coda gallery:-
@@ -199,79 +199,74 @@ void loop() {
 }
 
 int codaIoGetDataRowCount() {
-  JsonObject & root = codaIoGetCall("docs/" + docId + "/tables/" + tableId);
-  return root.success() ? root["rowCount"] : -1;
+  StaticJsonDocument<256> doc;
+  
+  return codaIoGetCall(doc, "docs/" + docId + "/tables/" + tableId) ? doc["rowCount"] : -1;
 }
 
 int codaIoPostDataRow(
   const sensors_event_t & eventTemperature,
   const sensors_event_t & eventHumidity
 ) {
-  StaticJsonBuffer<256> jsonBuffer;
+  StaticJsonDocument<256> doc;
   
-  JsonObject & root = jsonBuffer.createObject();
-  JsonArray & rows = root.createNestedArray("rows");
-  JsonObject & row = rows.createNestedObject();
-  JsonArray & cells = row.createNestedArray("cells");
+  JsonArray rows = doc.createNestedArray("rows");
+  JsonObject row = rows.createNestedObject();
+  JsonArray cells = row.createNestedArray("cells");
   
-  JsonObject & cellTemperature = jsonBuffer.createObject();
+  JsonObject cellTemperature = cells.createNestedObject();
   cellTemperature["column"] = colIdTemperature;
   cellTemperature["value"] = eventTemperature.temperature * 1.8 + 32;
   
-  JsonObject & cellHumidity = jsonBuffer.createObject();
+  JsonObject cellHumidity = cells.createNestedObject();
   cellHumidity["column"] = colIdHumidity;
   cellHumidity["value"] = eventHumidity.relative_humidity / 100;
-  
-  cells.add(cellTemperature);
-  cells.add(cellHumidity);
 
-  codaIoPostCall("docs/" + docId + "/tables/" + tableId + "/rows", root);
+  return codaIoPostCall(doc, "docs/" + docId + "/tables/" + tableId + "/rows");
 }
 
-JsonObject & codaIoGetCall(String api) {
-  JsonObject & retval = JsonObject::invalid();
-  
-  http.begin("https://coda.io/apis/v1beta1/" + api, fingerPrintSHA1);
+boolean codaIoGetCall(JsonDocument & doc, String api) {
+  boolean retVal = false;
+    
+  http.begin("https://coda.io/apis/v1/" + api, fingerPrintSHA1);
   http.addHeader("Authorization", "Bearer " + accessToken);
 
   int httpCode = http.GET();
-  
   if (httpCode == HTTP_CODE_OK) {
-    StaticJsonBuffer<1024> jsonBuffer;
-    return jsonBuffer.parseObject(http.getStream());
+    DeserializationError error = deserializeJson(doc, http.getStream());
+    retVal = !error;
   }
   else {
-    Serial.printf("CodaIoAPI: Failed GET with error: %s\n", http.errorToString(httpCode).c_str());
+    Serial.printf("CodaIoAPI: Failed GET with error: %s (%d)\n", http.errorToString(httpCode).c_str(), httpCode);
   }
 
   http.end();
 
-  return retval;
+  return retVal;
 }
 
-boolean codaIoPostCall(String api, const JsonObject & root) {
-  boolean retval = false;
+boolean codaIoPostCall(JsonDocument & doc, String api) {
+  boolean retVal = false;
   
-  http.begin("https://coda.io/apis/v1beta1/" + api, fingerPrintSHA1);
+  http.begin("https://coda.io/apis/v1/" + api, fingerPrintSHA1);
   http.addHeader("Authorization", "Bearer " + accessToken);
   http.addHeader("Content-Type", "application/json");
   
   String body = String();
-  root.printTo(body);
-  Serial.println(body);
-
-  int httpCode = http.POST(body);
+  serializeJson(doc, body);
+  Serial.printf(body.c_str());
   
+  int httpCode = http.POST(body);
   if (httpCode == HTTP_CODE_ACCEPTED) {
-    retval = true;
+    retVal = true;
   }
   else {
-    Serial.printf("CodaIoAPI: Failed POST with error: %s\n", http.errorToString(httpCode).c_str());
+    Serial.printf("CodaIoAPI: Failed POST with error: %s (%d)\n", http.errorToString(httpCode).c_str(), httpCode);
   }
 
   http.end();
 
-  return retval;
+  return retVal;
 }
 
 void displayTemperatureAndHumidity(
